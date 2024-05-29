@@ -1,0 +1,89 @@
+---
+name: Preparing a Debian-like image
+author: Frank Brehm
+description: Preparing a Debian-like image for doing stuff like Python tests or linting
+
+inputs:
+  manage_locales:
+    description: PyPI username
+    required: false
+    default: true
+  additional_locales:
+    description: A whitespace separated list of additional locales (except en_US.UTF-8)
+    required: false
+    default: 'de_DE.UTF-8'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Update all packages
+      id: apt-update
+      shell: bash
+      run: |
+        apt update --yes
+        apt list --upgradeable
+        apt dist-upgrade --yes
+    - name: Install locales and gettext
+      env:
+        MANAGE_LOCALES: ${{ inputs.manage_locales }}
+      id: install-gettext
+      shell: bash
+      run: |
+        if [[ "${MANAGE_LOCALES}" == false ]] ; then
+          echo
+          echo "Installing of locales is not necessary."
+        else
+          echo
+          echo "Installing of locales ..."
+          apt install --yes sudo locales gettext
+        fi
+    - name: Update Locales
+      env:
+        MANAGE_LOCALES: ${{ inputs.manage_locales }}
+        ADDITIONAL_LOCALES: ${{ inputs.additional_locales }}
+      id: update-locales
+      shell: bash
+      run: |
+        echo
+        echo "Current locales"
+        locale -a
+        echo
+        if [[ "${MANAGE_LOCALES}" == false ]] ; then
+          echo "Updating of locales is not necessary."
+        else
+          echo "Checking /etc/locale.gen ..."
+          if test -f /etc/locale.gen; then
+            echo "/etc/locale.gen:"
+            grep -P -v '^\s*(#.*)?$' /etc/locale.gen || true; echo "<-- EOF"
+          fi
+          echo
+          for add_locale in 'en_US.UTF-8' ${ADDITIONAL_LOCALES} ; do
+            echo
+            echo "Ensuring locale '${add_locale}' ..."
+            charset=$( echo "${add_locale}" | sed -e 's/\..*//' )
+            if [[ -z "${charset}" ]] ; then
+              charset="UTF-8"
+            fi
+            if grep "${add_locale}" /etc/locale.gen; then
+              if grep -P "^\\s*${add_locale}" ; then
+                echo "Locale '${add_locale}' already included."
+              else
+                echo "Enabling locale '${add_locale}' ..."
+                sed -i -e "s/#[ 	]*${add_locale}[ 	].*/${add_locale} ${charset}/" /etc/locale.gen
+              fi
+            else
+              echo "Adding locale '${add_locale}' ..."
+              echo "${add_locale} ${charset}" >> /etc/locale.gen
+            fi
+          done
+          echo "Managed /etc/locale.gen:"
+          grep -P -v '^\s*(#.*)?$' /etc/locale.gen || true; echo "<-- EOF"
+          echo
+          echo "Generating locales ..."
+          locale-gen
+          echo
+          echo "New locales"
+          locale -a
+        fi
+
+# vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list
