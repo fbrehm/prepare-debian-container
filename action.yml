@@ -5,7 +5,7 @@ description: Preparing a Debian-like image for doing stuff like Python tests or 
 
 inputs:
   manage_locales:
-    description: PyPI username
+    description: Should locales be installed and updated on this image
     required: false
     default: true
   additional_locales:
@@ -30,10 +30,10 @@ runs:
       shell: bash
       run: |
         if [[ "${MANAGE_LOCALES}" == false ]] ; then
-          echo
+          echo .
           echo "Installing of locales is not necessary."
         else
-          echo
+          echo .
           echo "Installing of locales ..."
           apt install --yes sudo locales gettext
         fi
@@ -44,10 +44,10 @@ runs:
       id: update-locales
       shell: bash
       run: |
-        echo
+        echo .
         echo "Current locales"
         locale -a
-        echo
+        echo .
         if [[ "${MANAGE_LOCALES}" == false ]] ; then
           echo "Updating of locales is not necessary."
         else
@@ -56,11 +56,11 @@ runs:
             echo "/etc/locale.gen:"
             grep -P -v '^\s*(#.*)?$' /etc/locale.gen || true; echo "<-- EOF"
           fi
-          echo
+          echo .
           for add_locale in 'en_US.UTF-8' ${ADDITIONAL_LOCALES} ; do
-            echo
+            echo .
             echo "Ensuring locale '${add_locale}' ..."
-            charset=$( echo "${add_locale}" | sed -e 's/\..*//' )
+            charset=$( echo "${add_locale}" | sed -e 's/^[^\.]*\.//' )
             if [[ -z "${charset}" ]] ; then
               charset="UTF-8"
             fi
@@ -78,10 +78,10 @@ runs:
           done
           echo "Managed /etc/locale.gen:"
           grep -P -v '^\s*(#.*)?$' /etc/locale.gen || true; echo "<-- EOF"
-          echo
+          echo .
           echo "Generating locales ..."
           locale-gen
-          echo
+          echo .
           echo "New locales"
           locale -a
         fi

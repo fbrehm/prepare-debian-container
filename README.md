@@ -22,7 +22,7 @@ It performs the following things:
 ```yaml
 inputs:
   manage_locales:
-    description: PyPI username
+    description: Should locales be installed and updated on this image
     required: false
     default: true
   additional_locales:
