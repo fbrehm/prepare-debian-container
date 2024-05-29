@@ -20,9 +20,12 @@ runs:
       id: apt-update
       shell: bash
       run: |
-        echo -e "Update all packages:\n"
+        echo "Update all packages."
         apt update --yes
+        echo "All packages to upgrade:"
         apt list --upgradeable
+        echo "<-- EOF"
+        echo "Doing the dist-upgrade:"
         apt dist-upgrade --yes
     - name: Install locales and gettext
       env:
@@ -30,7 +33,7 @@ runs:
       id: install-gettext
       shell: bash
       run: |
-        echo -e "Installing locales.\n"
+        echo "Installing locales."
         if [[ "${MANAGE_LOCALES}" == false ]] ; then
           echo "Installing of locales is not necessary."
         else
@@ -44,16 +47,20 @@ runs:
       id: update-locales
       shell: bash
       run: |
-        echo -e "Update locales.\n"
+        echo "Update locales."
         echo "Current locales:"
         locale -a
+        echo "<-- EOF"
         if [[ "${MANAGE_LOCALES}" == false ]] ; then
           echo "Updating of locales is not necessary."
         else
           echo "Checking /etc/locale.gen ..."
           if test -f /etc/locale.gen; then
-            echo "/etc/locale.gen:"
+            echo "Current /etc/locale.gen:"
             grep -P -v '^\s*(#.*)?$' /etc/locale.gen || true; echo "<-- EOF"
+          else
+            echo "Creating /etc/locale.gen ..."
+            touch /etc/locale.gen
           fi
           for add_locale in 'en_US.UTF-8' ${ADDITIONAL_LOCALES} ; do
             echo "Ensuring locale '${add_locale}' ..."
@@ -79,6 +86,7 @@ runs:
           locale-gen
           echo "New locales:"
           locale -a
+        echo "<-- EOF"
         fi
 
 # vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list
