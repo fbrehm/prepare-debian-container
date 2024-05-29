@@ -1,0 +1,41 @@
+---
+name: Test
+on:
+  push:
+  pull_request:
+  # schedule: [{cron: '10 23 * * 1'}]  # M H d m w (Sat 23:10)
+jobs:
+  test:
+    if: github.event_name != 'pull_request' || !contains('OWNER,MEMBER,COLLABORATOR', github.event.pull_request.author_association)
+    name: Test ${{ matrix.container }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        container: ['debian:bookworm', 'debian:trixie', 'ubuntu:jammy', 'ubuntu:noble']
+    container: ${{ matrix.container }}
+    steps:
+    - uses: actions/checkout@v4
+    - id: action_without_locales
+      uses: ./.github/..
+      with:
+        manage_locales: false
+    - id: action_with_locales
+      uses: ./.github/..
+      with:
+        additional_locales: de_DE.UTF-8 fr_FR.UTF-8
+    - name: test
+      run: |
+        ret=0
+        for loc in en_US.UTF-8 de_DE.UTF-8 fr_FR.UTF-8 ; do
+          printf "Testing for locale '${loc}' "
+          if locale -a | grep -w "${loc}" ; then
+            echo "  ok."
+          else
+            echo "  Not found."
+            ret=5
+          fi
+        done
+        if [[ "${ret}" != 0 ]] ; then
+          exit "${ret}"
+        fi
+
