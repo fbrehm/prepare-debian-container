@@ -13,6 +13,8 @@ It performs the following things:
     steps:
       - uses: actions/checkout@v4
       - uses: fbrehm/prepare-debian-container@v1
+        with:
+          additional_locales: de_DE.UTF-8 fr_FR.UTF-8
 ```
 
 ## Inputs
@@ -23,6 +25,10 @@ inputs:
     description: PyPI username
     required: false
     default: true
+  additional_locales:
+    description: A whitespace separated list of additional locales (except en_US.UTF-8)
+    required: false
+    default: 'de_DE.UTF-8'
 ```
 
 
