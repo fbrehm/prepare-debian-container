@@ -20,6 +20,7 @@ runs:
       id: apt-update
       shell: bash
       run: |
+        echo -e "Update all packages:\n"
         apt update --yes
         apt list --upgradeable
         apt dist-upgrade --yes
@@ -29,11 +30,10 @@ runs:
       id: install-gettext
       shell: bash
       run: |
+        echo -e "Installing locales.\n"
         if [[ "${MANAGE_LOCALES}" == false ]] ; then
-          echo .
           echo "Installing of locales is not necessary."
         else
-          echo .
           echo "Installing of locales ..."
           apt install --yes sudo locales gettext
         fi
@@ -44,10 +44,9 @@ runs:
       id: update-locales
       shell: bash
       run: |
-        echo .
-        echo "Current locales"
+        echo -e "Update locales.\n"
+        echo "Current locales:"
         locale -a
-        echo .
         if [[ "${MANAGE_LOCALES}" == false ]] ; then
           echo "Updating of locales is not necessary."
         else
@@ -56,9 +55,7 @@ runs:
             echo "/etc/locale.gen:"
             grep -P -v '^\s*(#.*)?$' /etc/locale.gen || true; echo "<-- EOF"
           fi
-          echo .
           for add_locale in 'en_US.UTF-8' ${ADDITIONAL_LOCALES} ; do
-            echo .
             echo "Ensuring locale '${add_locale}' ..."
             charset=$( echo "${add_locale}" | sed -e 's/^[^\.]*\.//' )
             if [[ -z "${charset}" ]] ; then
@@ -78,11 +75,9 @@ runs:
           done
           echo "Managed /etc/locale.gen:"
           grep -P -v '^\s*(#.*)?$' /etc/locale.gen || true; echo "<-- EOF"
-          echo .
           echo "Generating locales ..."
           locale-gen
-          echo .
-          echo "New locales"
+          echo "New locales:"
           locale -a
         fi
 
