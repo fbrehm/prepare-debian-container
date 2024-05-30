@@ -5,6 +5,8 @@ on:
   pull_request:
   # schedule: [{cron: '10 23 * * 1'}]  # M H d m w (Sat 23:10)
 jobs:
+
+  ###########################
   test:
     if: github.event_name != 'pull_request' || !contains('OWNER,MEMBER,COLLABORATOR', github.event.pull_request.author_association)
     name: Test ${{ matrix.container }}
@@ -43,4 +45,28 @@ jobs:
         if [[ "${ret}" != 0 ]] ; then
           exit "${ret}"
         fi
+
+  ###########################
+  linter:
+    if: github.event_name != 'pull_request' || !contains('OWNER,MEMBER,COLLABORATOR', github.event.pull_request.author_association)
+    runs-on: ubuntu-latest
+    name: Executing Linters
+    container: python:3.12
+    needs:
+      - test
+    steps:
+      - uses: actions/checkout@v4
+      - id: action_without_locales
+        uses: ./.github/..
+        with:
+          manage_locales: false
+      - name: Install and execute lsb-release
+        shell: bash
+        run: apt install --yes lsb-release || true; echo; lsb_release -a
+      - uses: fbrehm/github-install-pip-modules@main
+        with:
+          install_linter_tools: true
+      - name: Execute Yamllint
+        shell: bash
+        run: yamllint action.yml .github
 
