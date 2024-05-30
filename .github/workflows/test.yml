@@ -1,5 +1,6 @@
 ---
 name: Test
+# yamllint disable-line rule:truthy
 on:
   push:
   pull_request:
@@ -16,35 +17,35 @@ jobs:
         container: ['debian:bookworm', 'debian:trixie', 'ubuntu:jammy', 'ubuntu:noble']
     container: ${{ matrix.container }}
     steps:
-    - uses: actions/checkout@v4
-    - id: action_without_locales
-      uses: ./.github/..
-      with:
-        manage_locales: false
-    - id: action_with_locales
-      uses: ./.github/..
-      with:
-        additional_locales: de_DE.UTF-8 fr_FR.UTF-8
-    - name: test
-      shell: bash
-      run: |
-        echo "Testing for installed locales:"
-        locale -a
-        echo "<-- EOF"
-        ret=0
-        for loc in en_US.UTF-8 de_DE.UTF-8 fr_FR.UTF-8 ; do
-          printf "Testing for locale '${loc}' "
-          s_loc=$( echo "${loc}" | sed -e 's/UTF-8/utf8/i' )
-          if locale -a | grep -i -w "${s_loc}" ; then
-            echo "  ok."
-          else
-            echo "  Not found."
-            ret=5
+      - uses: actions/checkout@v4
+      - id: action_without_locales
+        uses: ./.github/..
+        with:
+          manage_locales: false
+      - id: action_with_locales
+        uses: ./.github/..
+        with:
+          additional_locales: de_DE.UTF-8 fr_FR.UTF-8
+      - name: test
+        shell: bash
+        run: |
+          echo "Testing for installed locales:"
+          locale -a
+          echo "<-- EOF"
+          ret=0
+          for loc in en_US.UTF-8 de_DE.UTF-8 fr_FR.UTF-8 ; do
+            printf "Testing for locale '${loc}' "
+            s_loc=$( echo "${loc}" | sed -e 's/UTF-8/utf8/i' )
+            if locale -a | grep -i -w "${s_loc}" ; then
+              echo "  ok."
+            else
+              echo "  Not found."
+              ret=5
+            fi
+          done
+          if [[ "${ret}" != 0 ]] ; then
+            exit "${ret}"
           fi
-        done
-        if [[ "${ret}" != 0 ]] ; then
-          exit "${ret}"
-        fi
 
   ###########################
   linter:
