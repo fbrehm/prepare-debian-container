@@ -61,9 +61,6 @@ jobs:
         uses: ./.github/..
         with:
           manage_locales: false
-      - name: Install and execute lsb-release
-        shell: bash
-        run: apt install --yes lsb-release || true; echo; lsb_release -a
       - uses: fbrehm/github-install-pip-modules@main
         with:
           install_linter_tools: true

@@ -88,5 +88,8 @@ runs:
           locale -a
           echo "<-- EOF"
         fi
+    - name: Install and execute lsb-release
+      shell: bash
+      run: apt install --yes lsb-release || true; echo; echo "LSB-Release:"; lsb_release -a
 
 # vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list
