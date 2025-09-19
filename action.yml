@@ -20,26 +20,38 @@ runs:
       id: apt-update
       shell: bash
       run: |
-        echo "Update all packages."
+        echo "."
+        echo "Apt update ..."
         apt update --yes
-        echo "All packages to upgrade:"
+        echo "."
+        echo "::group::Apt list upgradeable ..."
         apt list --upgradeable
         echo "<-- EOF"
-        echo "Doing the dist-upgrade:"
+        echo "::endgroup::"
+        echo "."
+        echo "::group::APT dist-upgrade ..."
         apt dist-upgrade --yes
-    - name: Install locales and gettext
+        echo "::endgroup::"
+
+    - name: 'Install sudo, locales and gettext.'
       env:
         MANAGE_LOCALES: ${{ inputs.manage_locales }}
       id: install-gettext
       shell: bash
       run: |
-        echo "Installing locales."
+        echo "."
+        echo "::group::APT install sudo"
+        apt install --yes sudo
+        echo "::endgroup::"
+        echo "."
         if [[ "${MANAGE_LOCALES}" == false ]] ; then
-          echo "Installing of locales is not necessary."
+            echo "Installing of locales is not necessary."
         else
-          echo "Installing of locales ..."
-          apt install --yes sudo locales gettext
+            echo "::group::APT install locales and gettext"
+            apt install --yes locales gettext
+            echo "::endgroup::"
         fi
+
     - name: Update Locales
       env:
         MANAGE_LOCALES: ${{ inputs.manage_locales }}
@@ -48,48 +60,75 @@ runs:
       shell: bash
       run: |
         echo "Update locales."
-        echo "Current locales:"
+        echo "::group::Current available locales:"
         locale -a
         echo "<-- EOF"
+        echo "::endgroup::"
+
+        echo "."
         if [[ "${MANAGE_LOCALES}" == false ]] ; then
-          echo "Updating of locales is not necessary."
+            echo "Updating of locales is not necessary."
         else
-          echo "Checking /etc/locale.gen ..."
-          if test -f /etc/locale.gen; then
-            echo "Current /etc/locale.gen:"
-            grep -P -v '^\s*(#.*)?$' /etc/locale.gen || true; echo "<-- EOF"
-          else
-            echo "Creating /etc/locale.gen ..."
-            touch /etc/locale.gen
-          fi
-          for add_locale in 'en_US.UTF-8' ${ADDITIONAL_LOCALES} ; do
-            echo "Ensuring locale '${add_locale}' ..."
-            charset=$( echo "${add_locale}" | sed -e 's/^[^\.]*\.//' )
-            if [[ -z "${charset}" ]] ; then
-              charset="UTF-8"
-            fi
-            if grep "${add_locale}" /etc/locale.gen; then
-              if grep -P "^\\s*${add_locale}" ; then
-                echo "Locale '${add_locale}' already included."
-              else
-                echo "Enabling locale '${add_locale}' ..."
-                sed -i -e "s/#[ 	]*${add_locale}[ 	].*/${add_locale} ${charset}/" /etc/locale.gen
-              fi
+            echo "Checking /etc/locale.gen ..."
+            if test -f /etc/locale.gen; then
+                echo "Current /etc/locale.gen:"
+                grep -P -v '^\s*(#.*)?$' /etc/locale.gen || true; echo "<-- EOF"
             else
-              echo "Adding locale '${add_locale}' ..."
-              echo "${add_locale} ${charset}" >> /etc/locale.gen
+                echo "Creating /etc/locale.gen ..."
+                touch /etc/locale.gen
             fi
-          done
-          echo "Managed /etc/locale.gen:"
-          grep -P -v '^\s*(#.*)?$' /etc/locale.gen || true; echo "<-- EOF"
-          echo "Generating locales ..."
-          locale-gen
-          echo "New locales:"
-          locale -a
-          echo "<-- EOF"
+
+            echo '.'
+            locales_to_install='en_US.UTF-8'
+            if [[ -n "${ADDITIONAL_LOCALES}" ]] ; then
+                for add_locale in ${ADDITIONAL_LOCALES} ; do
+                    if [[ "${add_locale}" == 'en_US.UTF-8' ]] ; then
+                        continue
+                    fi
+                    echo "Ensuring locale '${add_locale}' ..."
+                    charset=$( echo "${add_locale}" | sed -e 's/^[^\.]*\.//' )
+                    if [[ -z "${charset}" ]] ; then
+                        charset="UTF-8"
+                    fi
+                    if grep "${add_locale}" /etc/locale.gen; then
+                        if grep -P "^\\s*${add_locale}" ; then
+                            echo "Locale '${add_locale}' already included."
+                        else
+                            echo "Enabling locale '${add_locale}' ..."
+                            sed -i -e "s/#[ 	]*${add_locale}[ 	].*/${add_locale} ${charset}/" /etc/locale.gen
+                        fi
+                    else
+                        echo "Adding locale '${add_locale}' ..."
+                        echo "${add_locale} ${charset}" >> /etc/locale.gen
+                    fi
+                done
+            fi
+
+            echo "."
+            echo "Managed /etc/locale.gen:"
+            grep -P -v '^\s*(#.*)?$' /etc/locale.gen || true; echo "<-- EOF"
+
+            echo "."
+            echo "::group::Generating locales ..."
+            locale-gen
+            echo "::endgroup::"
+
+            echo "."
+            echo "::group::New locales:"
+            locale -a
+            echo "<-- EOF"
+            echo "::endgroup::"
         fi
+
     - name: Install and execute lsb-release
       shell: bash
-      run: apt install --yes lsb-release || true; echo; echo "LSB-Release:"; lsb_release -a
+      run: |
+        echo "."
+        echo "::group::Installing lsb-release"
+        apt install --yes lsb-release || true
+        echo "::endgroup::"
+        echo "."
+        echo "LSB-Release:"
+        lsb_release -a
 
 # vim: et tabstop=2 expandtab shiftwidth=2 softtabstop=2 list
