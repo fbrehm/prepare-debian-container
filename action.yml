@@ -23,19 +23,19 @@ runs:
         echo "."
         echo "Apt update ..."
         apt update --yes
+
         echo "."
         echo "::group::Apt list upgradeable ..."
         apt list --upgradeable
         echo "<-- EOF"
         echo "::endgroup::"
+
         echo "."
         echo "::group::APT dist-upgrade ..."
         apt dist-upgrade --yes
         echo "::endgroup::"
 
     - name: 'Install sudo, locales and gettext.'
-      env:
-        MANAGE_LOCALES: ${{ inputs.manage_locales }}
       id: install-gettext
       shell: bash
       run: |
@@ -43,14 +43,11 @@ runs:
         echo "::group::APT install sudo"
         apt install --yes sudo
         echo "::endgroup::"
+
         echo "."
-        if [[ "${MANAGE_LOCALES}" == false ]] ; then
-            echo "Installing of locales is not necessary."
-        else
-            echo "::group::APT install locales and gettext"
-            apt install --yes locales gettext
-            echo "::endgroup::"
-        fi
+        echo "::group::APT install locales and gettext"
+        apt install --yes locales gettext
+        echo "::endgroup::"
 
     - name: Update Locales
       env:
@@ -66,59 +63,65 @@ runs:
         echo "::endgroup::"
 
         echo "."
-        if [[ "${MANAGE_LOCALES}" == false ]] ; then
-            echo "Updating of locales is not necessary."
+        echo "Checking /etc/locale.gen ..."
+        if test -f /etc/locale.gen; then
+            echo "Current /etc/locale.gen:"
+            grep -P -v '^\s*(#.*)?$' /etc/locale.gen || true; echo "<-- EOF"
         else
-            echo "Checking /etc/locale.gen ..."
-            if test -f /etc/locale.gen; then
-                echo "Current /etc/locale.gen:"
-                grep -P -v '^\s*(#.*)?$' /etc/locale.gen || true; echo "<-- EOF"
-            else
-                echo "Creating /etc/locale.gen ..."
-                touch /etc/locale.gen
-            fi
+            echo "Creating /etc/locale.gen ..."
+            touch /etc/locale.gen
+        fi
 
-            echo '.'
-            locales_to_install='en_US.UTF-8'
+        echo '.'
+        locales_to_install='en_US.UTF-8'
+
+        if [[ "${MANAGE_LOCALES}" == false ]] ; then
+            echo "Only en_US.UTF-8 will be installed."
+        else
             if [[ -n "${ADDITIONAL_LOCALES}" ]] ; then
                 for add_locale in ${ADDITIONAL_LOCALES} ; do
                     if [[ "${add_locale}" == 'en_US.UTF-8' ]] ; then
                         continue
                     fi
-                    echo "Ensuring locale '${add_locale}' ..."
-                    charset=$( echo "${add_locale}" | sed -e 's/^[^\.]*\.//' )
-                    if [[ -z "${charset}" ]] ; then
-                        charset="UTF-8"
-                    fi
-                    if grep "${add_locale}" /etc/locale.gen; then
-                        if grep -P "^\\s*${add_locale}" ; then
-                            echo "Locale '${add_locale}' already included."
-                        else
-                            echo "Enabling locale '${add_locale}' ..."
-                            sed -i -e "s/#[ 	]*${add_locale}[ 	].*/${add_locale} ${charset}/" /etc/locale.gen
-                        fi
-                    else
-                        echo "Adding locale '${add_locale}' ..."
-                        echo "${add_locale} ${charset}" >> /etc/locale.gen
-                    fi
+                    locales_to_install+=" ${add_locale}"
                 done
             fi
-
-            echo "."
-            echo "Managed /etc/locale.gen:"
-            grep -P -v '^\s*(#.*)?$' /etc/locale.gen || true; echo "<-- EOF"
-
-            echo "."
-            echo "::group::Generating locales ..."
-            locale-gen
-            echo "::endgroup::"
-
-            echo "."
-            echo "::group::New locales:"
-            locale -a
-            echo "<-- EOF"
-            echo "::endgroup::"
         fi
+        echo "Locales to install: '${locales_to_instal}'"
+
+        for add_locale in ${locales_to_install} ; do
+            echo "Ensuring locale '${add_locale}' ..."
+            charset=$( echo "${add_locale}" | sed -e 's/^[^\.]*\.//' )
+            if [[ -z "${charset}" ]] ; then
+                charset="UTF-8"
+            fi
+            if grep "${add_locale}" /etc/locale.gen; then
+                if grep -P "^\\s*${add_locale}" ; then
+                    echo "Locale '${add_locale}' already included."
+                else
+                    echo "Enabling locale '${add_locale}' ..."
+                    sed -i -e "s/#[ 	]*${add_locale}[ 	].*/${add_locale} ${charset}/" /etc/locale.gen
+                fi
+            else
+                echo "Adding locale '${add_locale}' ..."
+                echo "${add_locale} ${charset}" >> /etc/locale.gen
+            fi
+        done
+
+        echo "."
+        echo "Managed /etc/locale.gen:"
+        grep -P -v '^\s*(#.*)?$' /etc/locale.gen || true; echo "<-- EOF"
+
+        echo "."
+        echo "::group::Generating locales ..."
+        locale-gen
+        echo "::endgroup::"
+
+        echo "."
+        echo "::group::New locales:"
+        locale -a
+        echo "<-- EOF"
+        echo "::endgroup::"
 
     - name: Install and execute lsb-release
       shell: bash
